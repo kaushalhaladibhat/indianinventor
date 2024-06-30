@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kaushal's Video Channel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1E90FF; /* Blue background */
+            color: white;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            background-color: #0077FF;
+            padding: 20px;
+            text-align: center;
+        }
+        #search-bar {
+            margin: 20px auto;
+            max-width: 600px;
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+            border: none;
+            border-radius: 5px;
+        }
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .video-container {
+            background: white;
+            color: black;
+            padding: 10px;
+            margin: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: calc(100% - 40px);
+            max-width: 800px;
+            text-align: left;
+        }
+        .video-container video,
+        .video-container iframe {
+            width: 100%;
+            height: auto;
+        }
+        .description {
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        footer {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        #upload-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #0077FF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: none; /* Hidden by default */
+        }
+        #file-input {
+            display: none;
+        }
+        .button {
+            background-color: #1E90FF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .button:hover {
+            background-color: #0077FF;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Kaushal's Video Channel</h1>
+        <input type="text" id="search-bar" placeholder="Search videos..." oninput="searchVideos()">
+    </header>
+
+    <main id="video-list">
+        <!-- Video containers will be dynamically added here -->
+    </main>
+
+    <button id="upload-btn" onclick="promptUpload()">+</button>
+    <input type="file" id="file-input" accept="video/*" onchange="handleFileUpload(event)">
+
+    <footer>
+        <p>&copy; 2024. All rights reserved. Developed by Kaushal H.</p>
+    </footer>
+
+    <script>
+        const uploadPassword = "megamemoryk12";
+        const deletePassword = "megamemoryk12";
+        const videosJsonUrl = 'https://raw.githubusercontent.com/your-username/your-repo/main/videos.json'; // Change to your GitHub raw URL
+
+        document.addEventListener('DOMContentLoaded', () => {
+            authenticateUser();
+            fetchVideos();
+        });
+
+        function authenticateUser() {
+            if (localStorage.getItem('authenticated') !== 'true') {
+                const password = prompt("Enter your password to access the upload and delete functions:");
+                if (password === uploadPassword) {
+                    localStorage.setItem('authenticated', 'true');
+                    document.getElementById('upload-btn').style.display = 'block';
+                } else {
+                    localStorage.setItem('authenticated', 'false');
+                    alert("Incorrect password! You won't be able to upload or delete videos.");
+                }
+            } else {
+                document.getElementById('upload-btn').style.display = 'block';
+            }
+        }
+
+        function promptUpload() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const title = prompt("Enter video title:");
+                const descriptionText = prompt("Enter video description and Arduino code:");
+                const url = prompt("Enter video URL:");
+                
+                // Append new video data to JSON file
+                appendVideoToJson({ title, description: descriptionText, url });
+            }
+        }
+
+        function appendVideoToJson(video) {
+            fetch(videosJsonUrl)
+                .then(response => response.json())
+                .then(videos => {
+                    videos.push(video);
+                    updateJsonFile(videos);
+                });
+        }
+
+        function updateJsonFile(videos) {
+            const githubApiUrl = 'https://api.github.com/repos/your-username/your-repo/contents/videos.json'; // Change to your GitHub API URL
+            const token = 'your-github-token'; // Add your GitHub token here (Make sure to keep it secure)
+            
+            fetch(githubApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const sha = data.sha;
+                    const content = btoa(JSON.stringify(videos, null, 2));
+                    fetch(githubApiUrl, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: 'Update videos.json',
+                            content: content,
+                            sha: sha
+                        })
+                    }).then(() => {
+                        alert('Video uploaded successfully!');
+                        fetchVideos();
+                    }).catch(error => {
+                        console.error('Error updating JSON file:', error);
+                        alert('Failed to upload video.');
+                    });
+                });
+        }
+
+        function fetchVideos() {
+            fetch(videosJsonUrl)
+                .then(response => response.json())
+                .then(videos => {
+                    const videoList = document.getElementById('video-list');
+                    videoList.innerHTML = ''; // Clear the video list
+                    videos.forEach(video => {
+                        const videoContainer = document.createElement('div');
+                        videoContainer.className = 'video-container';
+
+                        const titleElement = document.createElement('h3');
+                        titleElement.textContent = video.title;
+
+                        const videoElement = document.createElement('video');
+                        videoElement.src = video.url;
+                        videoElement.controls = true;
+
+                        const description = document.createElement('div');
+                        description.className = 'description';
+                        description.textContent = video.description;
+
+                        const shareButton = document.createElement('button');
+                        shareButton.className = 'button';
+                        shareButton.textContent = 'Share';
+                        shareButton.onclick = () => shareVideo(video.title, video.description, video.url);
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.className = 'button';
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.onclick = () => deleteVideo(videoContainer, video.title);
+
+                        videoContainer.appendChild(titleElement);
+                        videoContainer.appendChild(videoElement);
+                        videoContainer.appendChild(description);
+                        videoContainer.appendChild(shareButton);
+
+                        if (localStorage.getItem('authenticated') === 'true') {
+                            videoContainer.appendChild(deleteButton);
+                        }
+
+                        videoList.appendChild(videoContainer);
+                    });
+                }).catch(error => {
+                    console.error('Error fetching videos:', error);
+                });
+        }
+
+        function searchVideos() {
+            const query = document.getElementById('search-bar').value.toLowerCase();
+            const videos = document.querySelectorAll('.video-container');
+            videos.forEach(video => {
+                const description = video.querySelector('.description').textContent.toLowerCase();
+                if (description.includes(query)) {
+                    video.style.display = '';
+                } else {
+                    video.style.display = 'none';
+                }
+            });
+        }
+
+        function deleteVideo(videoContainer, title) {
+            if (confirm(`Are you sure you want to delete '${title}'?`)) {
+                const password = prompt("Enter your password to delete the video:");
+                if (password === deletePassword) {
+                    const videoList = Array.from(document.querySelectorAll('.video-container'));
+                    const index = videoList.indexOf(videoContainer);
+                    if (index > -1) {
+                        fetch(videosJsonUrl)
+                            .then(response => response.json())
+                            .then(videos => {
+                                videos.splice(index, 1);
+                                updateJsonFile(videos);
+                            });
+                    }
+                } else {
+                    alert("Incorrect password! Cannot delete the video.");
+                }
+            }
+        }
+
+        function shareVideo(title, descriptionText, url) {
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: descriptionText,
+                    url: url
+                }).then(() => {
+                    console.log('Shared successfully');
+                }).catch((error) => {
+                    console.error('Error sharing:', error);
+                });
+            } else {
+                alert('Web Share API is not supported in your browser.');
+            }
+        }
+    </script>
+</body>
+</html>
